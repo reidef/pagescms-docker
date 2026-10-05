@@ -1,0 +1,32 @@
+# Local run of the image with PostgreSQL. Not intended for production.
+#   cp .env.example .env   # then fill in secrets and GitHub App values
+#   docker compose up --build
+services:
+  pagescms:
+    image: pagescms:${PAGESCMS_VERSION:-local}
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://pagescms:pagescms@db:5432/pagescms
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pagescms
+      POSTGRES_PASSWORD: pagescms
+      POSTGRES_DB: pagescms
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pagescms -d pagescms"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  db-data:
