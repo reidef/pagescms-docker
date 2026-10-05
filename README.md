@@ -4,6 +4,14 @@ A container image for [Pages CMS](https://pagescms.org) ([source](https://github
 
 Image tags match upstream release numbers: `pagescms:2.1.8` contains Pages CMS `2.1.8`.
 
+Prebuilt multi-arch images (`linux/amd64`, `linux/arm64`) are published to the GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/<owner>/pagescms:2.1.8
+```
+
+`<owner>` is the GitHub user or organization that hosts this repository.
+
 ## Quick start
 
 ```bash

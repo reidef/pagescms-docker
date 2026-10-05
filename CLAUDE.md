@@ -10,6 +10,16 @@ This repo packages upstream [Pages CMS](https://github.com/pagescms/pagescms) (a
 - `docker/entrypoint.sh`: dispatches `serve` (default) / `migrate` / any other command.
 - `compose.yaml` + `.env.example`: local run with PostgreSQL. `.env` is gitignored.
 - `Makefile`: `build`, `buildx`, `run`, `down`, `version`, `upstream-versions`.
+- `.github/workflows/build.yml`: CI that builds amd64 + arm64 and pushes to GHCR.
+
+## CI / publishing
+
+- The workflow runs on pushes to `main` that touch build inputs (`Dockerfile`, `.dockerignore`, `docker/**`, the workflow itself), on PRs touching the same paths (build only, no push), and manually via `workflow_dispatch`.
+- It publishes `ghcr.io/<repo owner, lowercased>/pagescms:<PAGESCMS_VERSION>`. The version comes from the Dockerfile `ARG` and must be `X.Y.Z`. Only the version tag is pushed. There's no `latest`, so consumers pin explicit versions.
+- A rebuild without a version bump (e.g. a packaging fix) **overwrites the existing tag**. That's intentional: the tag means "this upstream release", not one specific build.
+- Auth uses the built-in `GITHUB_TOKEN` (`packages: write`). No secrets need configuring. If the package already exists and wasn't created by this repo's workflow, grant this repo write access in the package settings.
+- arm64 builds under QEMU on an `ubuntu-latest` runner. That's slower than native but needs no special runners. A local amd64 build under emulation takes about 1 minute. The `type=gha` build cache speeds up reruns.
+- Docs-only changes (README, CLAUDE.md, compose, Makefile) don't trigger a build. Use `workflow_dispatch` to force one.
 
 ## Versioning
 
@@ -26,7 +36,7 @@ This repo packages upstream [Pages CMS](https://github.com/pagescms/pagescms) (a
    - Node engine requirements (`NODE_VERSION` arg),
    - migrations moving out of `db/migrations` or drizzle-orm gaining runtime deps (the runtime stage copies `drizzle-orm` and `postgres` whole).
 3. Update `ARG PAGESCMS_VERSION`, then run `make build`.
-4. Verify (see below), then commit with a message like `Bump Pages CMS to X.Y.Z`.
+4. Verify (see below), then commit with a message like `Bump Pages CMS to X.Y.Z`. Pushing to `main` publishes the new tag to GHCR.
 
 ## Verifying a build
 
@@ -61,5 +71,6 @@ Real sign-in needs a real GitHub App, which isn't required for a packaging check
 
 ## Possible follow-ups (not done)
 
-- CI to build and push multi-arch images (`make buildx`) and to open bump PRs when upstream tags appear.
+- A scheduled workflow that opens a bump PR when a new upstream tag appears.
+- Native arm64 runners (matrix build + manifest merge) if QEMU build times become a problem.
 - Pinning base images by digest.
